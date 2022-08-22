@@ -1,5 +1,9 @@
 import logging
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram import Chat, ChatMember, ChatMemberUpdated, Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ChatMemberHandler
+from telegram.constants import ParseMode
+from typing import Optional, Tuple
+
 import os
 PORT = int(os.environ.get('PORT', '8443'))
 
@@ -27,7 +31,27 @@ def echo(update, context):
 def error(update, context):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, context.error)
+    
+async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Greets new users in chats and announces when someone leaves"""
+    result = extract_status_change(update.chat_member)
+    if result is None:
+        return
 
+    was_member, is_member = result
+    cause_name = update.chat_member.from_user.mention_html()
+    member_name = update.chat_member.new_chat_member.user.mention_html()
+
+    if not was_member and is_member:
+        await update.effective_chat.send_message(
+            f"{member_name} was added by {cause_name}. Welcome!",
+            parse_mode=ParseMode.HTML,
+        )
+    elif was_member and not is_member:
+        await update.effective_chat.send_message(
+            f"{member_name} is no longer with us. Thanks a lot, {cause_name} ...",
+            parse_mode=ParseMode.HTML,
+        )
 def main():
     """Start the bot."""
     # Create the Updater and pass it your bot's token.
@@ -41,6 +65,12 @@ def main():
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help))
+#     dp.add_handler(ChatMemberHandler(track_chats, ChatMemberHandler.MY_CHAT_MEMBER))
+#     dp.add_handler(CommandHandler("show_chats", show_chats))
+
+    # Handle members joining/leaving chats.
+    application.add_handler(ChatMemberHandler(greet_chat_members, ChatMemberHandler.CHAT_MEMBER))
+
 
     # on noncommand i.e message - echo the message on Telegram
     dp.add_handler(MessageHandler(Filters.text, echo))
