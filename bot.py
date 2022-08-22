@@ -1,7 +1,7 @@
 import logging
 from telegram import Chat, ChatMember, ChatMemberUpdated, Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ChatMemberHandler
-from telegram.ext import ParseMode
+from telegram import ParseMode
 from typing import Optional, Tuple
 
 import os
